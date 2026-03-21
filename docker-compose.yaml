@@ -41,6 +41,28 @@ services:
     #   - source: rsyncd_secrets
     #     target: rsyncd_secrets
 
+  rsync-ssh:
+    profiles: ["ssh"]
+    container_name: ${COMPOSE_PROJECT_NAME:-rsyncd-server}-ssh
+    build:
+      context: ./build-ssh
+      dockerfile: dockerfile
+    restart: on-failure:3
+    ports:
+      - "${RSYNC_SSH_PORT:-2222}:22/tcp"
+    environment:
+      RSYNC_SSH_PASSWORD_AUTH: ${RSYNC_SSH_PASSWORD_AUTH:-true}
+      RSYNC_SSH_PUBKEY_AUTH: ${RSYNC_SSH_PUBKEY_AUTH:-true}
+      RSYNC_SSH_UID_START: ${RSYNC_SSH_UID_START:-2000}
+      RSYNC_SSH_USERS: ${RSYNC_SSH_USERS:-}
+    volumes:
+      - type: bind
+        source: ${RSYNCD_HOST_DATA_DIR}
+        target: /data
+      - type: volume
+        source: rsync_ssh_state
+        target: /state
+
 # secrets:
 #   rsyncd_secrets:
 #     file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
@@ -52,3 +74,6 @@ services:
 #       type: none
 #       o: bind
 #       device: ${RSYNCD_HOST_DATA_DIR}
+
+volumes:
+  rsync_ssh_state:
