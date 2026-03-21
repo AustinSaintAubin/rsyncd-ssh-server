@@ -1,5 +1,10 @@
+# Do not include in git
 *.env
 /secrets/*
 
-# Keep Example files for reference
+# Keep Examples
 !/../*.example.*
+!*.example.env
+!/secrets/*.example.secrets
+
+# ---
