@@ -11,8 +11,7 @@ services:
       RSYNCD_GID: ${RSYNCD_GID:-root}
       RSYNCD_MAX_CONNECTIONS: ${RSYNCD_MAX_CONNECTIONS:-4}
       RSYNCD_TIMEOUT: ${RSYNCD_TIMEOUT:-600}
-      RSYNCD_MODULES: |
-        synology|.|synobackup|false|true|false|Synology Hyper Backup target
+      RSYNCD_MODULES: ${RSYNCD_MODULES:?RSYNCD_MODULES must be set in .env or --env-file}
     volumes:
       - type: bind
         source: ${RSYNCD_HOST_DATA_DIR}

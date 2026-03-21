@@ -8,14 +8,20 @@ Small Docker setup for a real `rsyncd` daemon that works well as a backup destin
 2. Create the host backup directory from `RSYNCD_HOST_DATA_DIR`.
 3. Copy `secrets/rsyncd.secrets.example` to `secrets/rsyncd.secrets`.
 4. Add one `username:password` line per rsync user in the secret file.
-5. Edit `RSYNCD_MODULES` in `docker-compose.yaml`.
-6. Start the service:
+5. Set `RSYNCD_MODULES` in `.env` or your `--env-file`.
+6. Optionally build the image first:
 
 ```bash
-docker compose up -d --build
+docker compose --file docker-compose.yaml --env-file .env build
 ```
 
-The compose project name, port, host storage path, and global daemon settings come from `.env`. `RSYNCD_MODULES` stays in `docker-compose.yaml` because Compose `.env` files do not support multiline values.
+7. Start the service:
+
+```bash
+docker compose --file docker-compose.yaml --env-file .env up --detach --build
+```
+
+The compose project name, port, host storage path, global daemon settings, and `RSYNCD_MODULES` all come from `.env` or `--env-file`.
 
 Each `RSYNCD_MODULES` line uses:
 
@@ -25,14 +31,15 @@ MODULE_NAME|RELATIVE_DATA_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
 
 `RELATIVE_DATA_PATH` is relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. `AUTH_USERS` may contain one user or a comma-separated list of users that exist in `secrets/rsyncd.secrets`.
 
-Example:
+Required `.env` syntax:
 
-```yaml
-RSYNCD_MODULES: |
-  synology_main|synology-main|synobackup|false|true|false|Main Synology backup target
-  paige_archive|paige-archive|paigeuser|false|false|false|Paige archive target
-  readonly_seed|readonly-seed|seeduser|true|true|false|Read-only seed module
+```dotenv
+RSYNCD_MODULES='synology_main|synology-main|synobackup|false|true|false|Main Synology backup target
+paige_archive|paige-archive|paigeuser|false|false|false|Paige archive target
+readonly_seed|readonly-seed|seeduser|true|true|false|Read-only seed module'
 ```
+
+Treat `RSYNCD_MODULES` as one variable whose value contains newline-separated module definitions. Do not expect multiple `RSYNCD_MODULES=` entries to merge.
 
 If you mount a custom config file to `/config/rsyncd.conf`, the container will use that instead of generating one.
 
@@ -61,16 +68,16 @@ List available modules:
 rsync rsync://localhost:873/
 ```
 
-Send a test file against the default example module in `docker-compose.yaml`:
+Send a test file against one of the example modules above:
 
 ```bash
-mkdir -p /tmp/rsyncd-test
+mkdir --parents /tmp/rsyncd-test
 printf 'hello\n' > /tmp/rsyncd-test/hello.txt
-rsync -av /tmp/rsyncd-test/ rsync://synobackup@localhost:873/synology
+rsync --archive --verbose /tmp/rsyncd-test/ rsync://synobackup@localhost:873/synology_main
 ```
 
 Check logs:
 
 ```bash
-docker compose logs -f
+docker compose --file docker-compose.yaml --env-file .env logs --follow
 ```
