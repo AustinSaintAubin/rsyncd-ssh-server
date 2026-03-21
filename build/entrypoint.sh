@@ -121,11 +121,16 @@ fi
 cat > "$generated_config_path" <<EOF
 uid = ${RSYNCD_UID:-root}
 gid = ${RSYNCD_GID:-root}
+address = ${RSYNCD_ADDRESS:-0.0.0.0}
 reverse lookup = no
+listen backlog = ${RSYNCD_LISTEN_BACKLOG:-32}
 max connections = ${RSYNCD_MAX_CONNECTIONS:-4}
 timeout = ${RSYNCD_TIMEOUT:-600}
 log file = /dev/stdout
 pid file = /var/run/rsync/rsyncd.pid
+strict modes = $(normalize_bool "${RSYNCD_STRICT_MODES:-true}")
+transfer logging = $(normalize_bool "${RSYNCD_LOGGING_TRANSFER:-true}")
+log format = ${RSYNCD_LOGGING_FORMAT:-%o %h [%a] %m %f %l}
 
 EOF
 

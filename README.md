@@ -22,6 +22,15 @@ docker compose --file docker-compose.yaml --env-file .env up --detach --build
 
 The compose project name, port, host storage path, global daemon settings, `RSYNCD_USERS`, and `RSYNCD_MODULES` all come from `.env` or `--env-file`.
 
+Useful global settings exposed via env include:
+- `RSYNCD_ADDRESS` -> `address`
+- `RSYNCD_LISTEN_BACKLOG` -> `listen backlog`
+- `RSYNCD_MAX_CONNECTIONS` -> `max connections`
+- `RSYNCD_TIMEOUT` -> `timeout`
+- `RSYNCD_STRICT_MODES` -> `strict modes`
+- `RSYNCD_LOGGING_TRANSFER` -> `transfer logging`
+- `RSYNCD_LOGGING_FORMAT` -> `log format`
+
 Each `RSYNCD_MODULES` line uses:
 
 ```text
