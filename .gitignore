@@ -1,2 +1,5 @@
-.env
-secrets/rsyncd.secrets
+*.env
+/secrets/*
+
+# Keep Example files for reference
+!/../*.example.*

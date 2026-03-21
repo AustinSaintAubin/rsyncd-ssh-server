@@ -37,7 +37,7 @@ Each `RSYNCD_MODULES` line uses:
 MODULE_NAME|MODULE_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
 ```
 
-If `MODULE_PATH` starts with `/`, it is treated as an absolute path and used as-is. Otherwise it is treated as relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. Relative paths may be nested, for example `synology/main` becomes `/data/synology/main`. `AUTH_USERS` may contain one user or a comma-separated list of users.
+If `MODULE_PATH` starts with `/`, it is treated as an absolute path and used as-is. If it is empty or `.`, the module uses the root `/data` directory. Otherwise it is treated as relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. Relative paths may be nested, for example `synology/main` becomes `/data/synology/main`. `AUTH_USERS` may contain one user or a comma-separated list of users.
 
 `RSYNCD_USERS` uses one `username:password` pair per line. If `RSYNCD_USERS` is set, the container generates `/etc/rsyncd.secrets` at startup and overwrites any previously generated copy. If `RSYNCD_USERS` is unset, the container will use `/run/secrets/rsyncd_secrets` when that file is mounted.
 
@@ -48,6 +48,7 @@ RSYNCD_USERS='synobackup:replace-with-a-long-random-password
 readonlyuser:replace-with-a-different-password'
 
 RSYNCD_MODULES='synology_main|synology/main|synobackup,readonlyuser|false|true|false|Main Synology backup target
+readonly_seed||readonlyuser|true|true|false|Read-only seed module
 nas-00|/mnt/testing|nas-00_user|false|true|false|Synology NAS-00 backup target'
 ```
 
