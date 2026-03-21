@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: dockerfile
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: on-failure:3
     ports:
       - "${RSYNCD_PORT:-873}:873/tcp"
     environment:
@@ -32,6 +33,6 @@ services:
       retries: 3
       start_period: 10s
 
-secrets:
-  rsyncd_secrets:
-    file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
+# secrets:
+#   rsyncd_secrets:
+#     file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
