@@ -31,12 +31,12 @@ MODULE_NAME|RELATIVE_DATA_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
 
 `RELATIVE_DATA_PATH` is relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. `AUTH_USERS` may contain one user or a comma-separated list of users that exist in `secrets/rsyncd.secrets`.
 
+The default example is intentionally a single Hyper Backup module for `synobackup`. If you add more module lines or more auth users, add matching `username:password` entries to `secrets/rsyncd.secrets` before starting the container.
+
 Required `.env` syntax:
 
 ```dotenv
-RSYNCD_MODULES='synology_main|synology-main|synobackup|false|true|false|Main Synology backup target
-paige_archive|paige-archive|paigeuser|false|false|false|Paige archive target
-readonly_seed|readonly-seed|seeduser|true|true|false|Read-only seed module'
+RSYNCD_MODULES='synology_main|synology-main|synobackup|false|true|false|Main Synology backup target'
 ```
 
 Treat `RSYNCD_MODULES` as one variable whose value contains newline-separated module definitions. Do not expect multiple `RSYNCD_MODULES=` entries to merge.
