@@ -11,6 +11,7 @@ services:
       RSYNCD_GID: ${RSYNCD_GID:-root}
       RSYNCD_MAX_CONNECTIONS: ${RSYNCD_MAX_CONNECTIONS:-4}
       RSYNCD_TIMEOUT: ${RSYNCD_TIMEOUT:-600}
+      RSYNCD_USERS: ${RSYNCD_USERS:-}
       RSYNCD_MODULES: ${RSYNCD_MODULES:?RSYNCD_MODULES must be set in .env or --env-file}
     volumes:
       - type: bind
@@ -18,9 +19,12 @@ services:
         target: /data
       # Optional custom config override:
       # - ./config/rsyncd.conf:/config/rsyncd.conf:ro
-    secrets:
-      - source: rsyncd_secrets
-        target: rsyncd_secrets
+      # Optional mounted secrets file override:
+      # - ./secrets/rsyncd.secrets:/run/secrets/rsyncd_secrets:rw
+    # secrets:
+    #   - source: rsyncd_secrets
+    #     target: rsyncd_secrets
+
     healthcheck:
       test: ["CMD-SHELL", "rsync rsync://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
       interval: 30s

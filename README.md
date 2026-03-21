@@ -6,22 +6,21 @@ Small Docker setup for a real `rsyncd` daemon that works well as a backup destin
 
 1. Copy `docker-compose.example.env` to `.env`.
 2. Create the host backup directory from `RSYNCD_HOST_DATA_DIR`.
-3. Copy `secrets/rsyncd.secrets.example` to `secrets/rsyncd.secrets`.
-4. Add one `username:password` line per rsync user in the secret file.
-5. Set `RSYNCD_MODULES` in `.env` or your `--env-file`.
-6. Optionally build the image first:
+3. Set `RSYNCD_USERS` and `RSYNCD_MODULES` in `.env` or your `--env-file`.
+4. Optionally, instead of `RSYNCD_USERS`, mount a file to `/run/secrets/rsyncd_secrets`.
+5. Optionally build the image first:
 
 ```bash
 docker compose --file docker-compose.yaml --env-file .env build
 ```
 
-7. Start the service:
+6. Start the service:
 
 ```bash
 docker compose --file docker-compose.yaml --env-file .env up --detach --build
 ```
 
-The compose project name, port, host storage path, global daemon settings, and `RSYNCD_MODULES` all come from `.env` or `--env-file`.
+The compose project name, port, host storage path, global daemon settings, `RSYNCD_USERS`, and `RSYNCD_MODULES` all come from `.env` or `--env-file`.
 
 Each `RSYNCD_MODULES` line uses:
 
@@ -29,17 +28,33 @@ Each `RSYNCD_MODULES` line uses:
 MODULE_NAME|RELATIVE_DATA_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
 ```
 
-`RELATIVE_DATA_PATH` is relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. `AUTH_USERS` may contain one user or a comma-separated list of users that exist in `secrets/rsyncd.secrets`.
+`RELATIVE_DATA_PATH` is relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. `AUTH_USERS` may contain one user or a comma-separated list of users.
 
-The default example is intentionally a single Hyper Backup module for `synobackup`. If you add more module lines or more auth users, add matching `username:password` entries to `secrets/rsyncd.secrets` before starting the container.
+`RSYNCD_USERS` uses one `username:password` pair per line. If `RSYNCD_USERS` is set, the container generates `/etc/rsyncd.secrets` at startup and overwrites any previously generated copy. If `RSYNCD_USERS` is unset, the container will use `/run/secrets/rsyncd_secrets` when that file is mounted.
 
-Required `.env` syntax:
+Env-only `.env` syntax:
 
 ```dotenv
-RSYNCD_MODULES='synology_main|synology-main|synobackup|false|true|false|Main Synology backup target'
+RSYNCD_USERS='synobackup:replace-with-a-long-random-password
+readonlyuser:replace-with-a-different-password'
+
+RSYNCD_MODULES='synology_main|synology-main|synobackup,readonlyuser|false|true|false|Main Synology backup target'
 ```
 
-Treat `RSYNCD_MODULES` as one variable whose value contains newline-separated module definitions. Do not expect multiple `RSYNCD_MODULES=` entries to merge.
+Treat `RSYNCD_MODULES` as one variable whose value contains newline-separated module definitions. Do not expect multiple `RSYNCD_MODULES=` entries to merge. Treat `RSYNCD_USERS` the same way: one multiline variable, not multiple merged entries.
+
+Optional file-based secrets:
+
+```text
+/run/secrets/rsyncd_secrets
+```
+
+That file should contain one `username:password` pair per line, for example:
+
+```text
+synobackup:replace-with-a-long-random-password
+readonlyuser:replace-with-a-different-password
+```
 
 If you mount a custom config file to `/config/rsyncd.conf`, the container will use that instead of generating one.
 
@@ -57,7 +72,7 @@ For Synology Hyper Backup, use:
 - Server name: your Docker host
 - Port: `RSYNCD_PORT`
 - Username: one of the users named in `RSYNCD_MODULES`
-- Password: value from `secrets/rsyncd.secrets`
+- Password: the matching password from `RSYNCD_USERS` or `/run/secrets/rsyncd_secrets`
 - Shared folder: the module name you want to target
 
 ## Testing

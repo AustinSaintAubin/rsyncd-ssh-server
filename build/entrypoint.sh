@@ -5,6 +5,7 @@ config_path="${RSYNCD_CONFIG_PATH:-/config/rsyncd.conf}"
 generated_config_path="/etc/rsyncd.conf"
 secret_source="/run/secrets/rsyncd_secrets"
 secret_target="/etc/rsyncd.secrets"
+rsyncd_users="${RSYNCD_USERS:-}"
 
 trim() {
   printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
@@ -30,8 +31,8 @@ normalize_bool() {
 require_secret_user() {
   username="$1"
 
-  if ! awk -F: -v username="$username" '$1 == username { found = 1 } END { exit found ? 0 : 1 }' "$secret_source"; then
-    echo "error: secret file must contain credentials for user '$username'" >&2
+  if ! awk -F: -v username="$username" 'NF >= 2 && $1 == username { found = 1 } END { exit found ? 0 : 1 }' "$secret_target"; then
+    echo "error: active secrets file must contain credentials for user '$username'" >&2
     exit 1
   fi
 }
@@ -57,7 +58,36 @@ validate_relative_path() {
 
 install -d -m 0755 /data /var/run/rsync
 
-if [ -f "$secret_source" ]; then
+if [ -n "$rsyncd_users" ]; then
+  : > "$secret_target"
+
+  while IFS= read -r user_line || [ -n "$user_line" ]; do
+    user_line=$(trim "$user_line")
+    [ -n "$user_line" ] || continue
+
+    case "$user_line" in
+      *:*)
+        username=$(trim "${user_line%%:*}")
+        password=${user_line#*:}
+        ;;
+      *)
+        echo "error: invalid RSYNCD_USERS entry (expected username:password): $user_line" >&2
+        exit 1
+        ;;
+    esac
+
+    if [ -z "$username" ] || [ -z "$password" ]; then
+      echo "error: invalid RSYNCD_USERS entry (missing username or password): $user_line" >&2
+      exit 1
+    fi
+
+    printf '%s:%s\n' "$username" "$password" >> "$secret_target"
+  done <<EOF
+$rsyncd_users
+EOF
+
+  chmod 0600 "$secret_target"
+elif [ -f "$secret_source" ]; then
   install -m 0600 "$secret_source" "$secret_target"
 fi
 
@@ -66,8 +96,8 @@ if [ -f "$config_path" ]; then
   exec rsync --daemon --no-detach --config="$config_path"
 fi
 
-if [ ! -f "$secret_source" ]; then
-  echo "error: Docker secret $secret_source was not provided" >&2
+if [ ! -f "$secret_target" ]; then
+  echo "error: neither RSYNCD_USERS nor $secret_source was provided" >&2
   exit 1
 fi
 
