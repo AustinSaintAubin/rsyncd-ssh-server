@@ -37,21 +37,33 @@ require_secret_user() {
   fi
 }
 
-validate_relative_path() {
-  relative_path="$1"
+validate_module_path() {
+  module_path="$1"
 
-  case "$relative_path" in
+  case "$module_path" in
     "")
       echo "error: module path cannot be empty" >&2
       exit 1
       ;;
-    /*)
-      echo "error: module path must be relative: $relative_path" >&2
+    *".."*)
+      echo "error: module path cannot contain '..': $module_path" >&2
       exit 1
       ;;
-    *".."*)
-      echo "error: module path cannot contain '..': $relative_path" >&2
-      exit 1
+  esac
+}
+
+resolve_module_path() {
+  module_path="$1"
+
+  case "$module_path" in
+    /*)
+      printf '%s\n' "$module_path"
+      ;;
+    .)
+      printf '/data\n'
+      ;;
+    *)
+      printf '/data/%s\n' "$module_path"
       ;;
   esac
 }
@@ -123,7 +135,7 @@ while IFS= read -r module_line || [ -n "$module_line" ]; do
   module_line=$(trim "$module_line")
   [ -n "$module_line" ] || continue
 
-  IFS='|' read -r module_name relative_data_path auth_users read_only list_module use_chroot comment extra <<EOF
+  IFS='|' read -r module_name module_data_path auth_users read_only list_module use_chroot comment extra <<EOF
 $module_line
 EOF
 
@@ -133,27 +145,23 @@ EOF
   fi
 
   module_name=$(trim "${module_name:-}")
-  relative_data_path=$(trim "${relative_data_path:-}")
+  module_data_path=$(trim "${module_data_path:-}")
   auth_users=$(trim "${auth_users:-}")
   read_only=$(trim "${read_only:-}")
   list_module=$(trim "${list_module:-}")
   use_chroot=$(trim "${use_chroot:-}")
   comment=$(trim "${comment:-}")
 
-  if [ -z "$module_name" ] || [ -z "$relative_data_path" ] || [ -z "$auth_users" ] || [ -z "$read_only" ] || [ -z "$list_module" ] || [ -z "$use_chroot" ]; then
+  if [ -z "$module_name" ] || [ -z "$module_data_path" ] || [ -z "$auth_users" ] || [ -z "$read_only" ] || [ -z "$list_module" ] || [ -z "$use_chroot" ]; then
     echo "error: invalid module definition (missing required fields): $module_line" >&2
     exit 1
   fi
 
-  validate_relative_path "$relative_data_path"
+  validate_module_path "$module_data_path"
   read_only=$(normalize_bool "$read_only")
   list_module=$(normalize_bool "$list_module")
   use_chroot=$(normalize_bool "$use_chroot")
-
-  module_path="/data"
-  if [ "$relative_data_path" != "." ]; then
-    module_path="/data/$relative_data_path"
-  fi
+  module_path=$(resolve_module_path "$module_data_path")
 
   install -d -m 0755 "$module_path"
 

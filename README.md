@@ -25,10 +25,10 @@ The compose project name, port, host storage path, global daemon settings, `RSYN
 Each `RSYNCD_MODULES` line uses:
 
 ```text
-MODULE_NAME|RELATIVE_DATA_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
+MODULE_NAME|MODULE_PATH|AUTH_USERS|READ_ONLY|LIST|USE_CHROOT|COMMENT
 ```
 
-`RELATIVE_DATA_PATH` is relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. `AUTH_USERS` may contain one user or a comma-separated list of users.
+If `MODULE_PATH` starts with `/`, it is treated as an absolute path and used as-is. Otherwise it is treated as relative to `/data`, which is backed by `RSYNCD_HOST_DATA_DIR`. Relative paths may be nested, for example `synology/main` becomes `/data/synology/main`. `AUTH_USERS` may contain one user or a comma-separated list of users.
 
 `RSYNCD_USERS` uses one `username:password` pair per line. If `RSYNCD_USERS` is set, the container generates `/etc/rsyncd.secrets` at startup and overwrites any previously generated copy. If `RSYNCD_USERS` is unset, the container will use `/run/secrets/rsyncd_secrets` when that file is mounted.
 
@@ -38,7 +38,8 @@ Env-only `.env` syntax:
 RSYNCD_USERS='synobackup:replace-with-a-long-random-password
 readonlyuser:replace-with-a-different-password'
 
-RSYNCD_MODULES='synology_main|synology-main|synobackup,readonlyuser|false|true|false|Main Synology backup target'
+RSYNCD_MODULES='synology_main|synology/main|synobackup,readonlyuser|false|true|false|Main Synology backup target
+nas-00|/mnt/testing|nas-00_user|false|true|false|Synology NAS-00 backup target'
 ```
 
 Treat `RSYNCD_MODULES` as one variable whose value contains newline-separated module definitions. Do not expect multiple `RSYNCD_MODULES=` entries to merge. Treat `RSYNCD_USERS` the same way: one multiline variable, not multiple merged entries.

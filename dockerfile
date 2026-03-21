@@ -3,7 +3,6 @@ FROM alpine:3.22
 RUN apk add --no-cache rsync
 
 COPY build/entrypoint.sh /usr/local/bin/entrypoint.sh
-
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
 
 EXPOSE 873/tcp
