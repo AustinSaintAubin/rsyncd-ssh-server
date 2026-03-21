@@ -1,0 +1,34 @@
+services:
+  rsyncd:
+    build:
+      context: .
+      dockerfile: dockerfile
+    restart: unless-stopped
+    ports:
+      - "${RSYNCD_PORT:-873}:873/tcp"
+    environment:
+      RSYNCD_UID: ${RSYNCD_UID:-root}
+      RSYNCD_GID: ${RSYNCD_GID:-root}
+      RSYNCD_MAX_CONNECTIONS: ${RSYNCD_MAX_CONNECTIONS:-4}
+      RSYNCD_TIMEOUT: ${RSYNCD_TIMEOUT:-600}
+      RSYNCD_MODULES: |
+        synology|.|synobackup|false|true|false|Synology Hyper Backup target
+    volumes:
+      - type: bind
+        source: ${RSYNCD_HOST_DATA_DIR}
+        target: /data
+      # Optional custom config override:
+      # - ./config/rsyncd.conf:/config/rsyncd.conf:ro
+    secrets:
+      - source: rsyncd_secrets
+        target: rsyncd_secrets
+    healthcheck:
+      test: ["CMD-SHELL", "rsync rsync://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+secrets:
+  rsyncd_secrets:
+    file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
