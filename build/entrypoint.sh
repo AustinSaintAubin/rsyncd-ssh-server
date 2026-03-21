@@ -41,10 +41,6 @@ validate_module_path() {
   module_path="$1"
 
   case "$module_path" in
-    "")
-      echo "error: module path cannot be empty" >&2
-      exit 1
-      ;;
     *".."*)
       echo "error: module path cannot contain '..': $module_path" >&2
       exit 1
@@ -56,6 +52,9 @@ resolve_module_path() {
   module_path="$1"
 
   case "$module_path" in
+    "")
+      printf '/data\n'
+      ;;
     /*)
       printf '%s\n' "$module_path"
       ;;
@@ -157,7 +156,7 @@ EOF
   use_chroot=$(trim "${use_chroot:-}")
   comment=$(trim "${comment:-}")
 
-  if [ -z "$module_name" ] || [ -z "$module_data_path" ] || [ -z "$auth_users" ] || [ -z "$read_only" ] || [ -z "$list_module" ] || [ -z "$use_chroot" ]; then
+  if [ -z "$module_name" ] || [ -z "$auth_users" ] || [ -z "$read_only" ] || [ -z "$list_module" ] || [ -z "$use_chroot" ]; then
     echo "error: invalid module definition (missing required fields): $module_line" >&2
     exit 1
   fi
