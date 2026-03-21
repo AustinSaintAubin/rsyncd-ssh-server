@@ -27,12 +27,9 @@ services:
       RSYNCD_USERS: ${RSYNCD_USERS:-}
       RSYNCD_MODULES: ${RSYNCD_MODULES:?RSYNCD_MODULES must be set in .env or --env-file}
     volumes:
-      - type: bind
-        source: ${RSYNCD_HOST_DATA_DIR}
+      - type: volume
+        source: rsyncd_data
         target: /data
-      
-      # - rsyncd_data:/data:rw
-
       # Optional custom config override:
       # - ./config/rsyncd.conf:/config/rsyncd.conf:ro
       # Optional mounted secrets file override:
@@ -56,8 +53,8 @@ services:
       RSYNC_SSH_UID_START: ${RSYNC_SSH_UID_START:-2000}
       RSYNC_SSH_USERS: ${RSYNC_SSH_USERS:-}
     volumes:
-      - type: bind
-        source: ${RSYNCD_HOST_DATA_DIR}
+      - type: volume
+        source: rsyncd_data
         target: /data
       - type: volume
         source: rsync_ssh_state
@@ -67,13 +64,12 @@ services:
 #   rsyncd_secrets:
 #     file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
 
-# volumes:
-#   rsyncd_data:
-#     driver: local
-#     driver_opts:
-#       type: none
-#       o: bind
-#       device: ${RSYNCD_HOST_DATA_DIR}
-
 volumes:
+  rsyncd_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${RSYNCD_HOST_DATA_DIR}
+
   rsync_ssh_state:
