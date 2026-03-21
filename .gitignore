@@ -6,5 +6,6 @@
 !/../*.example.*
 !*.example.env
 !/secrets/*.example.secrets
+!/secrets/*.example.pass
 
 # ---
