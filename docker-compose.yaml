@@ -1,5 +1,6 @@
 services:
   rsyncd:
+    container_name: ${COMPOSE_PROJECT_NAME:-rsyncd-server}
     build:
       context: .
       dockerfile: dockerfile
@@ -21,10 +22,11 @@ services:
       RSYNCD_USERS: ${RSYNCD_USERS:-}
       RSYNCD_MODULES: ${RSYNCD_MODULES:?RSYNCD_MODULES must be set in .env or --env-file}
     volumes:
-      - type: bind
-        source: ${RSYNCD_HOST_DATA_DIR}
-        target: /data
-      - ./testing:/mnt/testing:rw
+      - rsyncd_data:/data:rw
+      # - type: bind
+      #   source: ${RSYNCD_HOST_DATA_DIR}
+      #   target: /data
+
       # Optional custom config override:
       # - ./config/rsyncd.conf:/config/rsyncd.conf:ro
       # Optional mounted secrets file override:
@@ -36,3 +38,11 @@ services:
 # secrets:
 #   rsyncd_secrets:
 #     file: ${RSYNCD_SECRETS_FILE:-./secrets/rsyncd.secrets}
+
+volumes:
+  rsyncd_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${RSYNCD_HOST_DATA_DIR}
