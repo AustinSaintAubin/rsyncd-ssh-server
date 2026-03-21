@@ -32,6 +32,8 @@ To start the optional SSH-based backup service too:
 docker compose --profile ssh --file docker-compose.yaml --env-file docker-compose.example.env up --detach --build rsync-ssh
 ```
 
+When SSH mode is enabled, the `rsync-ssh` container also starts a local `127.0.0.1:873` proxy to the `rsyncd` service so Synology's encrypted `rsync-compatible server` flow can still reach the rsync modules after SSH login.
+
 Use either:
 
 - `RSYNCD_USERS` in the env file, or
@@ -39,7 +41,7 @@ Use either:
 
 If you use the secrets file approach, uncomment the example secrets mount in [`docker-compose.yaml`](/nas-01/volume1/docker/rsync-server/docker-compose.yaml). The comments in [`docker-compose.example.env`](/nas-01/volume1/docker/rsync-server/docker-compose.example.env) show the expected `RSYNCD_USERS` and `RSYNCD_MODULES` format.
 
-For SSH mode, set `RSYNC_SSH_USERS` in the env file. Each line uses `USERNAME|PASSWORD|PATH|UID|GID`. `PATH`, `UID`, and `GID` are optional.
+For SSH mode, users are derived from `RSYNCD_USERS` or `secrets/rsyncd.secrets` plus `RSYNCD_MODULES`. Use `RSYNC_SSH_USERS` only if you want to override that. Each override line uses `USERNAME|PASSWORD|PATH|UID|GID`. `PATH`, `UID`, and `GID` are optional.
 
 ## Usage
 
@@ -62,9 +64,9 @@ For encrypted transport with SSH, use the SSH-based backup option in Synology an
 
 - Server name: your Docker host
 - Port: `RSYNC_SSH_PORT`
-- Username: one of the users in `RSYNC_SSH_USERS`
+- Username: a user derived from `RSYNCD_USERS`/secrets and `RSYNCD_MODULES`, or one from `RSYNC_SSH_USERS`
 - Password: the matching SSH password
-- Directory: the user path from `RSYNC_SSH_USERS`
+- Directory: the derived module path for that user, or the path from `RSYNC_SSH_USERS`
 
 ## Testing
 

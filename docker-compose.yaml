@@ -41,6 +41,8 @@ services:
   rsync-ssh:
     profiles: ["ssh"]
     container_name: ${COMPOSE_PROJECT_NAME:-rsyncd-server}-ssh
+    depends_on:
+      - rsyncd
     build:
       context: ./build-ssh
       dockerfile: dockerfile
@@ -50,7 +52,14 @@ services:
     environment:
       RSYNC_SSH_PASSWORD_AUTH: ${RSYNC_SSH_PASSWORD_AUTH:-true}
       RSYNC_SSH_PUBKEY_AUTH: ${RSYNC_SSH_PUBKEY_AUTH:-true}
+      RSYNC_SSH_LOG_LEVEL: ${RSYNC_SSH_LOG_LEVEL:-DEBUG1}
+      RSYNC_SSH_TRACE_COMMANDS: ${RSYNC_SSH_TRACE_COMMANDS:-false}
       RSYNC_SSH_UID_START: ${RSYNC_SSH_UID_START:-2000}
+      RSYNC_SSH_RSYNC_PROXY_ENABLED: ${RSYNC_SSH_RSYNC_PROXY_ENABLED:-true}
+      RSYNC_SSH_RSYNC_TARGET_HOST: ${RSYNC_SSH_RSYNC_TARGET_HOST:-rsyncd}
+      RSYNC_SSH_RSYNC_TARGET_PORT: ${RSYNC_SSH_RSYNC_TARGET_PORT:-873}
+      RSYNCD_USERS: ${RSYNCD_USERS:-}
+      RSYNCD_MODULES: ${RSYNCD_MODULES:-}
       RSYNC_SSH_USERS: ${RSYNC_SSH_USERS:-}
     volumes:
       - type: volume
@@ -59,6 +68,8 @@ services:
       - type: volume
         source: rsync_ssh_state
         target: /state
+      # Optional mounted secrets file override:
+      # - ./secrets/rsyncd.secrets:/run/secrets/rsyncd_secrets:rw
 
 # secrets:
 #   rsyncd_secrets:

@@ -1,9 +1,11 @@
 FROM alpine:3.22
 
-RUN apk add --no-cache openssh-server rsync shadow
+RUN apk add --no-cache openssh-server rsync shadow socat
 
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod 0755 /usr/local/bin/entrypoint.sh
+COPY ./ssh-shell-wrapper.sh /usr/local/bin/ssh-shell-wrapper.sh
+COPY ./ssh-force-command.sh /usr/local/bin/ssh-force-command.sh
+RUN chmod 0755 /usr/local/bin/entrypoint.sh /usr/local/bin/ssh-shell-wrapper.sh /usr/local/bin/ssh-force-command.sh
 
 EXPOSE 22/tcp
 
