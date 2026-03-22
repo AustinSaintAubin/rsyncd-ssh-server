@@ -39,9 +39,7 @@ normalize_bool() {
 }
 
 maybe_force_command() {
-  if [ "$(normalize_bool "$rsync_ssh_trace_commands")" = "yes" ]; then
-    printf 'ForceCommand /usr/local/bin/ssh-force-command.sh\n'
-  fi
+  printf 'ForceCommand /usr/local/bin/ssh-force-command.sh\n'
 }
 
 start_rsync_proxy() {

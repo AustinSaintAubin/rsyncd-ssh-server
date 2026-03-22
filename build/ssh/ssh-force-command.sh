@@ -4,19 +4,12 @@ set -eu
 trace_file="${RSYNC_SSH_TRACE_FILE:-/tmp/ssh-command-trace.log}"
 original_command="${SSH_ORIGINAL_COMMAND:-}"
 module_definitions_path="${RSYNC_SSH_MODULES_PATH:-/etc/rsyncd.modules}"
+trace_commands="${RSYNC_SSH_TRACE_COMMANDS:-false}"
 
 timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 user_name="$(id -un)"
 pwd_path="$(pwd)"
 home_path="${HOME:-}"
-
-echo "[ssh-force] user=$user_name original_command=$original_command" >&2
-
-trace_dir="$(dirname "$trace_file")"
-if mkdir -p "$trace_dir" 2>/dev/null; then
-  printf '%s user=%s home=%s pwd=%s original_command=%s\n' \
-    "$timestamp" "$user_name" "$home_path" "$pwd_path" "$original_command" >> "$trace_file" 2>/dev/null || true
-fi
 
 trim() {
   printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
@@ -36,6 +29,30 @@ normalize_bool() {
       printf 'no\n'
       ;;
   esac
+}
+
+trace_enabled() {
+  [ "$(normalize_bool "$trace_commands")" = "yes" ]
+}
+
+trace_log() {
+  if ! trace_enabled; then
+    return
+  fi
+
+  printf '%s\n' "$1" >&2
+}
+
+write_trace_file() {
+  if ! trace_enabled; then
+    return
+  fi
+
+  trace_dir="$(dirname "$trace_file")"
+  if mkdir -p "$trace_dir" 2>/dev/null; then
+    printf '%s user=%s home=%s pwd=%s original_command=%s\n' \
+      "$timestamp" "$user_name" "$home_path" "$pwd_path" "$original_command" >> "$trace_file" 2>/dev/null || true
+  fi
 }
 
 resolve_data_path() {
@@ -81,7 +98,7 @@ generate_user_rsyncd_config() {
   module_count=0
 
   if [ ! -f "$module_definitions_path" ]; then
-    echo "[ssh-force] module definitions file not found: $module_definitions_path" >&2
+    trace_log "[ssh-force] module definitions file not found: $module_definitions_path"
     exit 1
   fi
 
@@ -131,17 +148,20 @@ EOF
   done < "$module_definitions_path"
 
   if [ "$module_count" -eq 0 ]; then
-    echo "[ssh-force] no rsync modules available for user=$current_user" >&2
+    trace_log "[ssh-force] no rsync modules available for user=$current_user"
     exit 1
   fi
 
   printf '%s\n' "$config_path"
 }
 
+trace_log "[ssh-force] user=$user_name original_command=$original_command"
+write_trace_file
+
 case "$original_command" in
   "rsync --server --daemon ."*)
     config_path="$(generate_user_rsyncd_config "$user_name")"
-    echo "[ssh-force] user=$user_name using rsyncd config $config_path for command=$original_command" >&2
+    trace_log "[ssh-force] user=$user_name using rsyncd config $config_path for command=$original_command"
     exec rsync --server --daemon --config="$config_path" .
     ;;
 esac
