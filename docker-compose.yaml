@@ -2,7 +2,7 @@ services:
   rsyncd:
     container_name: ${COMPOSE_PROJECT_NAME:-rsyncd-server}
     build:
-      context: ./build
+      context: ./build/rsyncd
       dockerfile: dockerfile
     # restart: unless-stopped
     restart: on-failure:3
@@ -44,7 +44,7 @@ services:
     depends_on:
       - rsyncd
     build:
-      context: ./build-ssh
+      context: ./build/ssh
       dockerfile: dockerfile
     restart: on-failure:3
     ports:
