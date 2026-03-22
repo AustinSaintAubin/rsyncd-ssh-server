@@ -1,4 +1,6 @@
 # Do not include in git
+archive
+backup
 *.env
 /secrets/*
 

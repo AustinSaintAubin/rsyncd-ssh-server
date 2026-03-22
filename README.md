@@ -1,117 +1,109 @@
-# rsyncd Backup Target
+# rsyncd & rsyncd SSH Service Backup Target
 
-Small Docker setup for a real `rsyncd` daemon that works well as a backup destination for Synology Hyper Backup and other rsync clients.
-
-It can also run an optional `rsync` over SSH service for encrypted transport.
+Small Docker setup for an `rsyncd` backup target, with an optional `rsync` over SSH service for encrypted Synology Hyper Backup connections and similar.
 
 ## Setup
 
 Edit the example files for your environment and rename them if you want the conventional names, for example `docker-compose.example.env` to `.env` and `secrets/rsyncd.example.secrets` to `secrets/rsyncd.secrets`.
 
+Generate a password with:
+
 ```bash
 openssl rand -base64 68 | tr -dc 'A-Za-z0-9' | head -c 64
 ```
 
-Create the host backup directory from `RSYNCD_HOST_DATA_DIR`.
-
-Run it with the example env file:
+Create the host data directory from `RSYNCD_HOST_DATA_DIR`, then start the stack with the example env file:
 
 ```bash
 docker compose --file docker-compose.yaml --env-file docker-compose.example.env up --detach --build
 ```
 
-If you renamed the env file to `.env`, you can use:
+If you renamed the env file to `.env`, you can just run:
 
 ```bash
 docker compose up --detach --build
 ```
 
-To start the optional SSH-based backup service too:
+To also start the optional SSH service:
 
 ```bash
-docker compose --profile ssh --file docker-compose.yaml --env-file docker-compose.example.env up --detach --build rsync-ssh
+docker compose --profile ssh --file docker-compose.yaml --env-file docker-compose.example.env up --detach --build
 ```
 
-When SSH mode is enabled, the `rsync-ssh` container also starts a local `127.0.0.1:873` proxy to the `rsyncd` service so Synology's encrypted `rsync-compatible server` flow can still reach the rsync modules after SSH login.
+Use either `RSYNCD_USERS` in the env file or mount `secrets/rsyncd.secrets` at `/run/secrets/rsyncd_secrets`. SSH users are derived from `RSYNCD_USERS` or the secrets file plus `RSYNCD_MODULES`. `RSYNC_SSH_USERS` is only needed if you want to override that behavior.
 
-Use either:
+## Synology
 
-- `RSYNCD_USERS` in the env file, or
-- a mounted `secrets/rsyncd.secrets` file at `/run/secrets/rsyncd_secrets`
-
-If you use the secrets file approach, uncomment the example secrets mount in [`docker-compose.yaml`](/nas-01/volume1/docker/rsync-server/docker-compose.yaml). The comments in [`docker-compose.example.env`](/nas-01/volume1/docker/rsync-server/docker-compose.example.env) show the expected `RSYNCD_USERS` and `RSYNCD_MODULES` format.
-
-For SSH mode, users are derived from `RSYNCD_USERS` or `secrets/rsyncd.secrets` plus `RSYNCD_MODULES`. Use `RSYNC_SSH_USERS` only if you want to override that. Each override line uses `USERNAME|PASSWORD|PATH|UID|GID`. `PATH`, `UID`, and `GID` are optional.
-
-## Usage
-
-Connect clients to:
-
-```text
-rsync://<AUTH_USER>@<host>:<RSYNCD_PORT>/<MODULE_NAME>
-```
-
-For Synology Hyper Backup, use:
+For plain `rsyncd`:
 
 - Server type: `rsync-compatible server`
-- Server name: your Docker host
-- Port: `RSYNCD_PORT`
+- Server name or IP: your Docker host
+- Port: `873` or `RSYNCD_PORT`
 - Username: a user allowed by the target module
-- Password: the matching password from `RSYNCD_USERS` or `secrets/rsyncd.secrets`
-- Shared folder: the module name you want to target
+- Password: the matching password from `RSYNCD_USERS` or the secrets file
+- Backup module: the module name
 
-For encrypted transport with SSH, use the SSH-based backup option in Synology and connect to:
+For encrypted transport over SSH:
 
-- Server name: your Docker host
-- Port: `RSYNC_SSH_PORT`
-- Username: a user derived from `RSYNCD_USERS`/secrets and `RSYNCD_MODULES`, or one from `RSYNC_SSH_USERS`
+- Server type: `rsync-compatible server`
+- Transfer encryption: `On`
+- Server name or IP: your Docker host
+- Port: `2222` or `RSYNC_SSH_PORT`
+- Username: the SSH user for that module
 - Password: the matching SSH password
-- Directory: the derived module path for that user, or the path from `RSYNC_SSH_USERS`
+- Backup module: the rsync module name, for example `nas-01`
+- Directory: leave blank unless you intentionally want a subfolder inside that module
+
+The SSH container serves Synology's `rsync --server --daemon .` flow and proxies local `127.0.0.1:873` back to the `rsyncd` service so encrypted Hyper Backup connections can still reach the rsync modules.
 
 ## Testing
 
-List available modules:
+List available modules from the host:
+
 ```bash
 rsync rsync://SERVER_IP_HOSTNAME:873/
 ```
 
-Or from inside the container:
+Or from inside the `rsyncd` container:
+
 ```bash
 docker exec rsyncd-server rsync rsync://127.0.0.1/
 ```
 
 List files in an example module:
+
 ```bash
 rsync rsync://servers_user@SERVER_IP_HOSTNAME:873/servers-main/
 ```
 
-List files in an example module, using stored password
+List files in an example module with a password file:
+
 ```bash
-cat ../secrets/rsync.example.pass
-chmod 600 ../secrets/rsync.example.pass
-rsync --password-file=../secrets/rsync.example.pass rsync://servers_user@SERVER_IP_HOSTNAME:873/servers-main/
+chmod 600 secrets/rsync.example.pass
+rsync --password-file=secrets/rsync.example.pass rsync://servers_user@SERVER_IP_HOSTNAME:873/servers-main/
 ```
 
-Test the SSH service:
+Test the Synology-style SSH flow by listing modules:
+
 ```bash
-ssh -p 2222 nas-03@SERVER_IP_HOSTNAME
+rsync -e 'ssh -p 2222' nas-01@SERVER_IP_HOSTNAME::
 ```
 
-Send a test file over SSH:
+Then list one module:
+
 ```bash
-rsync --archive --verbose --rsh='ssh -p 2222' /tmp/rsyncd-test/ nas-03@SERVER_IP_HOSTNAME:./
+rsync -e 'ssh -p 2222' nas-01@SERVER_IP_HOSTNAME::nas-01
 ```
 
-Send a test file against one of the example modules:
+## Troubleshooting
+
+- If Synology says SSH authentication failed, type the password manually and confirm it matches the user in `RSYNCD_USERS` or the active secrets file.
+- If SSH login works but Synology cannot find modules, test the same flow manually with `rsync -e 'ssh -p 2222' USER@HOST::`.
+- If you see `rsync: did not see server greeting`, the SSH service is not successfully handling the `rsync --server --daemon .` flow yet.
+- A simple working pattern is one SSH user per backup module, for example `nas-01` -> `nas-01`.
+
+Check logs with:
 
 ```bash
-mkdir --parents /tmp/rsyncd-test
-printf 'hello\n' > /tmp/rsyncd-test/hello.txt
-rsync --archive --verbose /tmp/rsyncd-test/ rsync://servers_user@SERVER_IP_HOSTNAME:873/servers-main
-```
-
-Follow logs:
-
-```bash
-docker compose --file docker-compose.yaml --env-file docker-compose.example.env logs --follow
+docker compose logs --tail 200 rsyncd rsync-ssh
 ```
