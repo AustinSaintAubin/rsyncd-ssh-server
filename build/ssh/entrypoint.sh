@@ -14,8 +14,7 @@ next_uid="${RSYNC_SSH_UID_START:-2000}"
 rsync_proxy_enabled="${RSYNC_SSH_RSYNC_PROXY_ENABLED:-true}"
 rsync_proxy_host="${RSYNC_SSH_RSYNC_TARGET_HOST:-rsyncd}"
 rsync_proxy_port="${RSYNC_SSH_RSYNC_TARGET_PORT:-873}"
-rsync_ssh_log_level="${RSYNC_SSH_LOG_LEVEL:-DEBUG1}"
-rsync_ssh_trace_commands="${RSYNC_SSH_TRACE_COMMANDS:-false}"
+rsync_ssh_log_level="${RSYNC_SSH_LOG_LEVEL:-INFO}"
 
 trim() {
   printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
@@ -38,7 +37,7 @@ normalize_bool() {
   esac
 }
 
-maybe_force_command() {
+emit_force_command() {
   printf 'ForceCommand /usr/local/bin/ssh-force-command.sh\n'
 }
 
@@ -339,7 +338,7 @@ X11Forwarding no
 PrintMotd no
 PidFile /var/run/sshd.pid
 Subsystem sftp internal-sftp -l VERBOSE
-$(maybe_force_command)
+$(emit_force_command)
 EOF
 
 exec /usr/sbin/sshd -D -e -f "$generated_config_path"
